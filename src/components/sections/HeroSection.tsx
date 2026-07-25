@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, BarChart3, Play, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 
 type StatItem = {
@@ -15,11 +16,11 @@ type DashboardCardProps = {
 };
 
 const navItems = [
-  { label: 'Platform', href: '#platform' },
-  { label: 'Solutions', href: '#solutions' },
-  { label: 'Marketplace', href: '#marketplace' },
-  { label: 'About', href: '#about' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Platform', sectionId: 'platform' },
+  { label: 'Solutions', sectionId: 'solutions' },
+  { label: 'Marketplace', sectionId: 'marketplace' },
+  { label: 'About', sectionId: 'about' },
+  { label: 'Pricing', sectionId: 'pricing' },
 ];
 
 const stats: StatItem[] = [
@@ -55,6 +56,17 @@ function ProgressRing() {
 
 export function HeroSection() {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const navigate = useNavigate();
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <section
@@ -77,27 +89,26 @@ export function HeroSection() {
       <div className="relative mx-auto flex min-h-screen max-w-[1400px] flex-col">
         <header className="sticky top-4 z-20 rounded-full border border-white/10 bg-slate-950/40 px-3 py-3 shadow-[0_12px_40px_rgba(2,6,23,0.25)] backdrop-blur-xl sm:px-4">
           <div className="flex items-center justify-between gap-4">
-            <a href="#" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white uppercase">
+            <button type="button" onClick={() => navigate('/')} className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.24em] text-white">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
                 <Sparkles className="size-4" />
               </span>
               SoilMint
-            </a>
+            </button>
             <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
               {navItems.map((item) => (
-                <a key={item.label} href={item.href} className="transition hover:text-white">
+                <button key={item.label} type="button" onClick={() => scrollToSection(item.sectionId)} className="transition hover:text-white">
                   {item.label}
-                </a>
+                </button>
               ))}
             </nav>
             <div className="flex items-center gap-2 sm:gap-3">
-              <a href="#" className="hidden rounded-full border border-white/10 px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 sm:inline-flex">
+              <Button size="sm" variant="outline" className="border-white/15 bg-white/10 text-white hover:bg-white/15" onClick={() => navigate('/login')}>
                 Login
-              </a>
-              <Button size="sm" variant="outline" className="border-white/15 bg-white/10 text-white hover:bg-white/15">
-                Explore Demo
               </Button>
-              <Button size="sm" className="hidden sm:inline-flex">Get Started</Button>
+              <Button size="sm" className="hidden sm:inline-flex" onClick={() => navigate('/signup')}>
+                Get Started
+              </Button>
             </div>
           </div>
         </header>
@@ -147,13 +158,13 @@ export function HeroSection() {
                 transition={{ delay: 0.34, duration: 0.6 }}
                 className="mt-9 flex flex-col gap-3 sm:flex-row"
               >
-                <Button size="lg" className="gap-2 px-6">
+                <Button size="lg" className="gap-2 px-6" onClick={() => navigate('/signup')}>
                   Get Started
                   <ArrowRight className="size-4" />
                 </Button>
-                <Button variant="outline" size="lg" className="gap-2 border-white/15 bg-white/10 px-6 text-slate-100 hover:bg-white/15">
+                <Button variant="outline" size="lg" className="gap-2 border-white/15 bg-white/10 px-6 text-slate-100 hover:bg-white/15" onClick={() => navigate('/login')}>
                   <Play className="size-4 fill-current" />
-                  Explore Demo
+                  Login
                 </Button>
               </motion.div>
 
