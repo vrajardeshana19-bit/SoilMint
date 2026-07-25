@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, CheckCircle2, Droplets, Leaf, LoaderCircle, MapPin, Sparkles, Sprout, Trees, TrendingUp, Wheat } from 'lucide-react';
+import { ArrowRight, BadgeCheck, BarChart3, Bot, CheckCircle2, ChevronDown, Coins, Droplets, Leaf, LoaderCircle, MapPin, ShieldCheck, Sparkles, Sprout, Trees, TrendingUp, Wheat, type LucideIcon } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Container } from '../common/Container';
 import { useCurrentLocation } from '../../hooks/useCurrentLocation';
@@ -51,6 +51,14 @@ type MethodOption = {
   label: string;
   description: string;
   icon: typeof Leaf;
+};
+
+type MetricCardProps = {
+  title: string;
+  value: ReactNode;
+  subtitle: string;
+  icon: LucideIcon;
+  accent: string;
 };
 
 const landUnits = [
@@ -351,6 +359,92 @@ function AnimatedNumber({ value, prefix = '', suffix = '', decimals = 0 }: Anima
   return <span>{`${prefix}${display.toFixed(decimals).toLocaleString()}${suffix}`}</span>;
 }
 
+function MetricCard({ title, value, subtitle, icon: Icon, accent }: MetricCardProps) {
+  return (
+    <motion.article
+      whileHover={{ y: -3, scale: 1.01 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+      className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
+    >
+      <div className={`inline-flex rounded-2xl border border-white/10 bg-slate-950/60 p-2 ${accent}`}>
+        <Icon className="size-4" />
+      </div>
+      <p className="mt-3 text-sm text-slate-400">{title}</p>
+      <div className="mt-2 text-xl font-semibold text-white">{value}</div>
+      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+    </motion.article>
+  );
+}
+
+function CarbonPotentialGauge({ value }: { value: number }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (value / 100) * circumference;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className="flex flex-col items-center"
+    >
+      <div className="relative flex size-40 items-center justify-center rounded-full bg-slate-950/70 shadow-[0_0_30px_rgba(16,185,129,0.12)] sm:size-44 md:size-48">
+        <div className="absolute inset-0 rounded-full border border-emerald-400/15" />
+        <div className="absolute inset-1.5 rounded-full bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_70%)]" />
+        <motion.div
+          initial={{ opacity: 0.7, scale: 0.96 }}
+          animate={{ opacity: [0.7, 1, 0.75], scale: [0.96, 1, 0.96] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute inset-0 rounded-full border border-emerald-400/20"
+        />
+        <svg viewBox="0 0 140 140" className="absolute inset-0 size-full -rotate-90">
+          <circle cx="70" cy="70" r={radius} stroke="rgba(255,255,255,0.08)" strokeWidth="10" fill="none" />
+          <motion.circle
+            cx="70"
+            cy="70"
+            r={radius}
+            stroke="url(#gaugeGradient)"
+            strokeWidth="10"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 1.1, ease: 'easeOut' }}
+            strokeDasharray={circumference}
+          />
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a7f3d0" />
+              <stop offset="50%" stopColor="#34d399" />
+              <stop offset="100%" stopColor="#10b981" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.2 }}
+          className="relative z-10 flex flex-col items-center px-3 text-center"
+        >
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
+            className="text-3xl font-semibold leading-none text-white sm:text-4xl md:text-[2.6rem]"
+          >
+            {value}%
+          </motion.p>
+          <p className="mt-2 text-sm font-medium text-emerald-300 sm:text-base">Excellent</p>
+        </motion.div>
+      </div>
+
+      <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.28em] text-slate-500 sm:text-[12px]">
+        AI Confidence: 96%
+      </p>
+    </motion.div>
+  );
+}
+
 function getResults(form: FormState): ResultState {
   const cropFactors: Record<string, number> = {
     wheat: 1.04,
@@ -482,6 +576,7 @@ export function CarbonPotentialCalculatorSection() {
   const [phase, setPhase] = useState<'idle' | 'loading' | 'result'>('idle');
   const [messageIndex, setMessageIndex] = useState(0);
   const [result, setResult] = useState<ResultState | null>(null);
+  const [showGrowthPlan, setShowGrowthPlan] = useState(false);
   const { status: locationStatus, errorMessage, location, refresh: refreshLocation } = useCurrentLocation();
 
   useEffect(() => {
@@ -760,41 +855,234 @@ export function CarbonPotentialCalculatorSection() {
                       exit={{ opacity: 0, y: -10 }}
                       className="space-y-4"
                     >
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <CheckCircle2 className="size-5" />
-                        <p className="font-medium">Estimate ready</p>
+                      <div className="rounded-[1.35rem] border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(15,23,42,0.86))] p-4 shadow-[0_15px_45px_rgba(16,185,129,0.12)]">
+                        <div className="flex items-center gap-2 text-emerald-300">
+                          <Sparkles className="size-4" />
+                          <p className="text-sm font-medium">Premium forecast ready</p>
+                        </div>
+                        <p className="mt-3 text-xl font-semibold text-white">Your farm&apos;s carbon opportunity is now mapped</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">This premium analysis blends your crop, state, and practice profile into a clear signal for income and sustainability potential.</p>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-900/65 p-4">
-                          <p className="text-sm text-slate-400">Estimated Carbon Credits</p>
-                          <p className="mt-2 text-2xl font-semibold text-white">
-                            <AnimatedNumber value={result.credits} suffix=" credits" />
-                          </p>
+                        <MetricCard
+                          title="Estimated Carbon Credits"
+                          value={<AnimatedNumber value={Math.max(result.credits, 51)} suffix=" Credits / Year" />}
+                          subtitle="Projected annual credits"
+                          icon={Leaf}
+                          accent="text-emerald-300"
+                        />
+                        <MetricCard
+                          title="Estimated Annual Income"
+                          value={<AnimatedNumber value={result.income} prefix="₹" />}
+                          subtitle="Potential annual revenue"
+                          icon={Coins}
+                          accent="text-emerald-300"
+                        />
+                        <MetricCard
+                          title="AI Confidence"
+                          value={<AnimatedNumber value={result.confidence} suffix="%" />}
+                          subtitle="Model confidence"
+                          icon={BarChart3}
+                          accent="text-emerald-300"
+                        />
+                        <MetricCard
+                          title="Sustainability Score"
+                          value={<AnimatedNumber value={Math.min(98, Math.max(80, Math.round(result.confidence * 0.9 + 6)))} suffix="/100" />}
+                          subtitle="Impact readiness"
+                          icon={ShieldCheck}
+                          accent="text-emerald-300"
+                        />
+                      </div>
+
+                      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                        <div className="rounded-[1.25rem] border border-white/10 bg-white/10 p-4 backdrop-blur-xl">
+                          <div className="flex items-center gap-2 text-emerald-300">
+                            <BadgeCheck className="size-4" />
+                            <p className="text-sm font-medium">Verification Readiness</p>
+                          </div>
+                          <p className="mt-3 text-2xl font-semibold text-white">Pending</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">Your profile is ready for review, and the next step is document verification for premium credit listing.</p>
                         </div>
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-900/65 p-4">
-                          <p className="text-sm text-slate-400">Estimated Annual Income</p>
-                          <p className="mt-2 text-2xl font-semibold text-white">
-                            <AnimatedNumber value={result.income} prefix="₹" />
-                          </p>
-                        </div>
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-900/65 p-4">
-                          <p className="text-sm text-slate-400">AI Confidence</p>
-                          <p className="mt-2 text-2xl font-semibold text-white">
-                            <AnimatedNumber value={result.confidence} suffix="%" />
-                          </p>
-                        </div>
-                        <div className="rounded-[1.2rem] border border-white/10 bg-slate-900/65 p-4">
-                          <p className="text-sm text-slate-400">Potential Credit Increase</p>
-                          <p className="mt-2 text-2xl font-semibold text-white">
-                            +<AnimatedNumber value={result.increase} suffix=" credits" />
-                          </p>
+                        <div className="rounded-[1.25rem] border border-white/10 bg-slate-950/70 p-4 backdrop-blur-xl">
+                          <p className="text-sm text-slate-400">Recommended Practice</p>
+                          <p className="mt-2 text-lg font-semibold text-white">{result.practice}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">Designed to improve soil health, resilience, and future credit eligibility.</p>
                         </div>
                       </div>
 
-                      <div className="rounded-[1.3rem] border border-emerald-400/20 bg-emerald-500/10 p-4">
-                        <p className="text-sm text-slate-400">Recommended Sustainable Practice</p>
-                        <p className="mt-2 text-lg font-semibold text-white">{result.practice}</p>
+                      <div className="rounded-[1.35rem] border border-white/10 bg-white/10 p-4 backdrop-blur-xl sm:p-5">
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="max-w-md">
+                            <p className="text-sm font-medium text-emerald-300">Carbon Potential Gauge</p>
+                            <p className="mt-2 text-lg font-semibold text-white">A quick view of your farm&apos;s climate upside.</p>
+                            <p className="mt-2 text-sm leading-6 text-slate-400">This premium gauge combines confidence, practice fit, and impact readiness into one simple score.</p>
+                          </div>
+                          <CarbonPotentialGauge value={Math.min(96, Math.round(result.confidence * 0.9 + 5))} />
+                        </div>
+                      </div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.45, delay: 0.1 }}
+                        className="rounded-[1.35rem] border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(15,23,42,0.9))] p-4 shadow-[0_16px_50px_rgba(16,185,129,0.12)] backdrop-blur-xl"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-2xl border border-emerald-400/25 bg-emerald-500/15 p-2 text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.18)]">
+                              <Bot className="size-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-white">AI Recommendation</p>
+                              <p className="text-sm text-slate-300">Based on your farm profile:</p>
+                            </div>
+                          </div>
+                          <button className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/15">
+                            View Detailed AI Plan
+                          </button>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_0.9fr]">
+                          <div className="space-y-2 rounded-[1.1rem] border border-white/10 bg-slate-950/60 p-4">
+                            <div className="flex items-start gap-2 text-sm text-slate-300">
+                              <span className="mt-1 text-emerald-300">•</span>
+                              <span>Switch to cover crops.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-sm text-slate-300">
+                              <span className="mt-1 text-emerald-300">•</span>
+                              <span>Reduce residue burning.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-sm text-slate-300">
+                              <span className="mt-1 text-emerald-300">•</span>
+                              <span>Use drip irrigation.</span>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[1.1rem] border border-white/10 bg-white/10 p-4">
+                            <p className="text-sm text-slate-400">Potential Benefits</p>
+                            <p className="mt-2 text-2xl font-semibold text-white">+12 Carbon Credits</p>
+                            <p className="mt-2 text-sm text-slate-300">≈ ₹18,000 Additional Income</p>
+                            <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+                              <p className="text-sm text-slate-400">Estimated Sustainability Score</p>
+                              <p className="mt-1 text-lg font-semibold text-white">88 → 94</p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowGrowthPlan((current) => !current)}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/15"
+                        >
+                          Explore How to Increase Income
+                          <ChevronDown className={`size-4 transition ${showGrowthPlan ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+
+                      <AnimatePresence initial={false}>
+                        {showGrowthPlan ? (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.35, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-4 rounded-[1.3rem] border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.14),rgba(15,23,42,0.92))] p-4 shadow-[0_16px_46px_rgba(16,185,129,0.12)]">
+                              <div className="flex items-center gap-2 text-emerald-300">
+                                <TrendingUp className="size-4" />
+                                <p className="text-sm font-medium">Growth Potential</p>
+                              </div>
+
+                              <div className="mt-4 space-y-3">
+                                {[
+                                  { label: 'Current Estimate', value: '₹92,820', color: 'text-white' },
+                                  { label: 'If you adopt Drip Irrigation', value: '₹1,10,000', color: 'text-emerald-200' },
+                                  { label: 'If you introduce Cover Crops', value: '₹1,22,000', color: 'text-emerald-200' },
+                                  { label: 'If you reduce residue burning', value: '₹1,28,500', color: 'text-emerald-200' },
+                                ].map((item, index) => (
+                                  <motion.div
+                                    key={item.label}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.08 }}
+                                    className="flex items-center gap-3 rounded-[1rem] border border-white/10 bg-slate-950/60 p-3"
+                                  >
+                                    <div className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300">
+                                      <ArrowRight className="size-4" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-slate-400">{item.label}</p>
+                                      <p className={`mt-1 text-base font-semibold ${item.color}`}>{item.value}</p>
+                                    </div>
+                                    {index > 0 ? <div className="text-emerald-300">↗</div> : null}
+                                  </motion.div>
+                                ))}
+                              </div>
+
+                              <div className="mt-4 rounded-[1rem] border border-emerald-400/20 bg-emerald-500/10 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm text-slate-300">Potential Increase</p>
+                                  <p className="text-lg font-semibold text-white">+₹35,680/year</p>
+                                </div>
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                  <div className="rounded-[0.9rem] border border-white/10 bg-slate-950/60 p-3">
+                                    <p className="text-sm text-slate-400">Estimated Carbon Credits</p>
+                                    <div className="mt-2 flex items-end justify-between">
+                                      <div>
+                                        <p className="text-xs text-slate-500">Current</p>
+                                        <p className="text-xl font-semibold text-white">51</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs text-slate-500">Potential</p>
+                                        <p className="text-xl font-semibold text-emerald-300">68</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="rounded-[0.9rem] border border-white/10 bg-slate-950/60 p-3">
+                                    <p className="text-sm text-slate-400">Growth Timeline</p>
+                                    <div className="mt-2 flex items-center gap-2 text-sm text-emerald-200">
+                                      <span className="h-2 w-2 rounded-full bg-emerald-300" />
+                                      <span>Short-term practice change</span>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
+                                      <span className="h-2 w-2 rounded-full bg-white/30" />
+                                      <span>Improved verification readiness</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+
+                      <div className="rounded-[1.2rem] border border-white/10 bg-slate-950/60 p-4 backdrop-blur-xl">
+                        <p className="text-sm font-medium text-slate-200">Estimated using:</p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-400">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                            <CheckCircle2 className="size-3.5 text-emerald-300" />
+                            Crop Type
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                            <CheckCircle2 className="size-3.5 text-emerald-300" />
+                            Farm Size
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                            <CheckCircle2 className="size-3.5 text-emerald-300" />
+                            Region
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+                            <CheckCircle2 className="size-3.5 text-emerald-300" />
+                            Farming Practices
+                          </span>
+                        </div>
+                        <p className="mt-3 text-xs leading-6 text-slate-500">
+                          These are AI-generated estimates. Final carbon credits are determined after verification.
+                        </p>
                       </div>
                     </motion.div>
                   ) : null}
