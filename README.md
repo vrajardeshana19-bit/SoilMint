@@ -30,3 +30,24 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+# 🌱 SoilMint
+
+AI-powered platform that helps farmers measure, improve, verify, and monetize sustainable farming practices through carbon credits.
+
+## Tech Stack
+
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- Framer Motion
+
+## Current Progress
+
+- ✅ Premium landing page
+- ✅ Carbon Calculator
+- ✅ Real browser geolocation
+- 🚧 AI Carbon Assessment Engine
+- 🚧 Marketplace
+- 🚧 Farmer Dashboard
