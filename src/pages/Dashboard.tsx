@@ -1,43 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/dashboard/Sidebar';
 import { Topbar } from '../components/dashboard/Topbar';
 import { DashboardHome } from '../components/dashboard/DashboardHome';
 import { FarmCard } from '../components/dashboard/FarmCard';
 import { AddFarmModal } from '../components/dashboard/AddFarmModal';
-
-const farms = [
-  {
-    name: 'Asha Farm',
-    village: 'Bharuch',
-    state: 'Gujarat',
-    area: '24 acres',
-    status: 'Healthy',
-    credits: '184 credits',
-    score: '92/100',
-    updated: 'Updated 2h ago',
-  },
-  {
-    name: 'Shivam Fields',
-    village: 'Sangli',
-    state: 'Maharashtra',
-    area: '18 acres',
-    status: 'Improving',
-    credits: '132 credits',
-    score: '88/100',
-    updated: 'Updated 1d ago',
-  },
-  {
-    name: 'Nirmal Orchards',
-    village: 'Tirunelveli',
-    state: 'Tamil Nadu',
-    area: '31 acres',
-    status: 'Monitoring',
-    credits: '214 credits',
-    score: '90/100',
-    updated: 'Updated 4h ago',
-  },
-];
+import { FarmDetailView } from '../components/dashboard/FarmDetailView';
+import { useFarms } from '../contexts/FarmsContext';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Welcome back, Ramesh', subtitle: 'Track farm health, carbon promises, and growth opportunities in one place.' },
@@ -55,6 +25,21 @@ const sectionTitles: Record<string, { title: string; subtitle: string }> = {
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showAddFarm, setShowAddFarm] = useState(false);
+  const { farms } = useFarms();
+  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'farms' | 'detail'>('dashboard');
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.includes('/dashboard/farms/')) {
+      setActiveRoute('detail');
+      setActiveSection('farms');
+    } else if (location.pathname === '/dashboard/farms') {
+      setActiveRoute('farms');
+      setActiveSection('farms');
+    } else {
+      setActiveRoute('dashboard');
+    }
+  }, [location.pathname]);
 
   const header = useMemo(() => sectionTitles[activeSection] ?? sectionTitles.dashboard, [activeSection]);
 
@@ -74,16 +59,25 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
           >
-            {activeSection === 'dashboard' ? (
-              <DashboardHome />
-            ) : activeSection === 'farms' ? (
+            {activeSection === 'dashboard' && activeRoute === 'dashboard' ? (
+              <DashboardHome onAddFarm={() => setShowAddFarm(true)} />
+            ) : activeSection === 'farms' && activeRoute === 'farms' ? (
               <div className="space-y-4">
-                <div className="grid gap-4 xl:grid-cols-3">
-                  {farms.map((farm) => (
-                    <FarmCard key={farm.name} {...farm} />
-                  ))}
-                </div>
+                {farms.length === 0 ? (
+                  <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-8 text-center shadow-[0_20px_70px_rgba(2,6,23,0.16)] backdrop-blur-xl">
+                    <p className="text-lg font-semibold text-white">No farms yet</p>
+                    <p className="mt-2 text-sm text-slate-400">Create your first digital farm profile to unlock carbon intelligence.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 xl:grid-cols-3">
+                    {farms.map((farm) => (
+                      <FarmCard key={farm.id} {...farm} />
+                    ))}
+                  </div>
+                )}
               </div>
+            ) : activeRoute === 'detail' ? (
+              <FarmDetailView />
             ) : (
               <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-6 shadow-[0_20px_70px_rgba(2,6,23,0.16)] backdrop-blur-xl">
                 <p className="text-sm font-medium text-emerald-300">{header.title}</p>

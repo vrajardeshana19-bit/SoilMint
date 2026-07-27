@@ -18,6 +18,10 @@ const quickActions = [
   { title: 'Marketplace', subtitle: 'Explore carbon opportunities', icon: Leaf },
 ];
 
+type DashboardHomeProps = {
+  onAddFarm?: () => void;
+};
+
 const timeline = [
   'Farm Created',
   'Land Record Uploaded',
@@ -26,7 +30,7 @@ const timeline = [
   'Marketplace Listing Created',
 ];
 
-export function DashboardHome() {
+export function DashboardHome({ onAddFarm }: DashboardHomeProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -67,6 +71,11 @@ export function DashboardHome() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
                 whileHover={{ y: -3, scale: 1.01 }}
+                onClick={() => {
+                  if (action.title === 'Add Farm' && onAddFarm) {
+                    onAddFarm();
+                  }
+                }}
                 className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
               >
                 <div className="flex items-center justify-between">

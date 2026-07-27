@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { MapPin, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type FarmCardProps = {
+  id: string;
   name: string;
   village: string;
   state: string;
@@ -10,9 +12,11 @@ type FarmCardProps = {
   credits: string;
   score: string;
   updated: string;
+  location?: string;
 };
 
-export function FarmCard({ name, village, state, area, status, credits, score, updated }: FarmCardProps) {
+export function FarmCard({ id, name, village, state, area, status, credits, score, updated, location }: FarmCardProps) {
+  const navigate = useNavigate();
   return (
     <motion.article
       whileHover={{ y: -4, scale: 1.01 }}
@@ -23,7 +27,7 @@ export function FarmCard({ name, village, state, area, status, credits, score, u
           <p className="text-lg font-semibold text-white">{name}</p>
           <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
             <MapPin className="size-4 text-emerald-300" />
-            <span>{village}, {state}</span>
+            <span>{location ?? `${village}, ${state}`}</span>
           </div>
         </div>
         <div className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-200">
@@ -54,7 +58,7 @@ export function FarmCard({ name, village, state, area, status, credits, score, u
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10">
+        <button type="button" onClick={() => navigate(`/dashboard/farms/${id}`)} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10">
           Open Farm
         </button>
         <button type="button" className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 transition hover:bg-emerald-500/15">
