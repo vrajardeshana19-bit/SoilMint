@@ -2,11 +2,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight, FileText, LoaderCircle, MapPinned, Sparkles, UploadCloud, X } from 'lucide-react';
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import toast from 'react-hot-toast';
+import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 import { useFarms } from '../../contexts/FarmsContext';
 
 type AddFarmWizardProps = {
   open: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 };
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -70,8 +72,9 @@ const stepDescriptions: Record<Step, string> = {
   5: 'Your farm is live and ready for carbon intelligence.',
 };
 
-export function AddFarmWizard({ open, onClose }: AddFarmWizardProps) {
+export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) {
   const { addFarm } = useFarms();
+  const { setCurrentFarmId } = useCurrentFarm();
   const [step, setStep] = useState<Step>(1);
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -178,7 +181,9 @@ export function AddFarmWizard({ open, onClose }: AddFarmWizardProps) {
         confidence: draft.confidence,
         documents: [file?.name ?? 'Government Land Record.pdf'],
       });
+      setCurrentFarmId(createdFarm.id);
       toast.success(`Farm ${createdFarm.name} created successfully.`);
+      onCreated?.();
       setStep(5);
       return;
     }

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/dashboard/Sidebar';
 import { Topbar } from '../components/dashboard/Topbar';
 import { DashboardHome } from '../components/dashboard/DashboardHome';
 import { FarmCard } from '../components/dashboard/FarmCard';
 import { AddFarmModal } from '../components/dashboard/AddFarmModal';
 import { FarmDetailView } from '../components/dashboard/FarmDetailView';
+import { CarbonIntelligenceView } from '../components/dashboard/CarbonIntelligenceView';
 import { useFarms } from '../contexts/FarmsContext';
+import { useCurrentFarm } from '../contexts/CurrentFarmContext';
 
 const sectionTitles: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: 'Welcome back, Ramesh', subtitle: 'Track farm health, carbon promises, and growth opportunities in one place.' },
@@ -26,20 +28,55 @@ const Dashboard = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showAddFarm, setShowAddFarm] = useState(false);
   const { farms } = useFarms();
-  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'farms' | 'detail'>('dashboard');
+  const { currentFarmId, setCurrentFarmId } = useCurrentFarm();
+  const [activeRoute, setActiveRoute] = useState<'dashboard' | 'farms' | 'detail' | 'module'>('dashboard');
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleFarmCreated = () => {
+    setActiveSection('farms');
+    setActiveRoute('farms');
+    setShowAddFarm(false);
+  };
 
   useEffect(() => {
-    if (location.pathname.includes('/dashboard/farms/')) {
-      setActiveRoute('detail');
-      setActiveSection('farms');
-    } else if (location.pathname === '/dashboard/farms') {
-      setActiveRoute('farms');
-      setActiveSection('farms');
-    } else {
+    if (location.pathname === '/dashboard') {
       setActiveRoute('dashboard');
+      setActiveSection('dashboard');
+      return;
     }
-  }, [location.pathname]);
+
+    const path = location.pathname.split('/').filter(Boolean);
+    if (path[0] === 'dashboard' && path[1] === 'farms') {
+      const farmId = path[2];
+      const module = path[3];
+
+      if (farmId) {
+        setCurrentFarmId(farmId);
+      }
+
+      if (farmId && module) {
+        setActiveRoute('module');
+        setActiveSection(module);
+      } else if (farmId) {
+        setActiveRoute('detail');
+        setActiveSection('farms');
+      } else {
+        setActiveRoute('farms');
+        setActiveSection('farms');
+      }
+      return;
+    }
+
+    setActiveRoute('dashboard');
+    setActiveSection('dashboard');
+  }, [location.pathname, setCurrentFarmId]);
+
+  useEffect(() => {
+    if (farms.length === 0 && location.pathname === '/dashboard') {
+      navigate('/dashboard/farms', { replace: true });
+    }
+  }, [farms.length, location.pathname, navigate]);
 
   const header = useMemo(() => sectionTitles[activeSection] ?? sectionTitles.dashboard, [activeSection]);
 
@@ -51,7 +88,25 @@ const Dashboard = () => {
         </div>
 
         <div className="flex-1 space-y-4">
-          <Topbar title={header.title} subtitle={header.subtitle} />
+          <Topbar
+            title={header.title}
+            subtitle={header.subtitle}
+            farms={farms.map((farm) => ({ id: farm.id, name: farm.name }))}
+            currentFarmId={currentFarmId}
+            onFarmSelect={(farmId) => {
+              setCurrentFarmId(farmId);
+              const path = location.pathname.split('/').filter(Boolean);
+              if (path[0] === 'dashboard' && path[1] === 'farms') {
+                const currentFarm = path[2];
+                const module = path[3];
+                if (currentFarm) {
+                  navigate(module ? `/dashboard/farms/${farmId}/${module}` : `/dashboard/farms/${farmId}`);
+                } else {
+                  navigate(`/dashboard/farms/${farmId}`);
+                }
+              }
+            }}
+          />
 
           <motion.div
             key={activeSection}
@@ -65,8 +120,15 @@ const Dashboard = () => {
               <div className="space-y-4">
                 {farms.length === 0 ? (
                   <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-8 text-center shadow-[0_20px_70px_rgba(2,6,23,0.16)] backdrop-blur-xl">
-                    <p className="text-lg font-semibold text-white">No farms yet</p>
+                    <p className="text-lg font-semibold text-white">No farms yet.</p>
                     <p className="mt-2 text-sm text-slate-400">Create your first digital farm profile to unlock carbon intelligence.</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddFarm(true)}
+                      className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/15"
+                    >
+                      + Add Farm
+                    </button>
                   </div>
                 ) : (
                   <div className="grid gap-4 xl:grid-cols-3">
@@ -78,6 +140,8 @@ const Dashboard = () => {
               </div>
             ) : activeRoute === 'detail' ? (
               <FarmDetailView />
+            ) : activeSection === 'carbon' ? (
+              <CarbonIntelligenceView />
             ) : (
               <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-6 shadow-[0_20px_70px_rgba(2,6,23,0.16)] backdrop-blur-xl">
                 <p className="text-sm font-medium text-emerald-300">{header.title}</p>
@@ -88,7 +152,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <AddFarmModal open={showAddFarm} onClose={() => setShowAddFarm(false)} />
+      <AddFarmModal open={showAddFarm} onClose={() => setShowAddFarm(false)} onCreated={handleFarmCreated} />
     </div>
   );
 };

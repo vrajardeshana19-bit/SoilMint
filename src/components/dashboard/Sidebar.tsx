@@ -16,6 +16,8 @@ import {
   Trees,
   UserCircle2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,6 +39,22 @@ type SidebarProps = {
 };
 
 export function Sidebar({ activeSection, onSelect, onAddFarm }: SidebarProps) {
+  const navigate = useNavigate();
+  const { currentFarmId } = useCurrentFarm();
+
+  const handleSelect = (itemId: string) => {
+    onSelect(itemId);
+    if (itemId === 'dashboard') {
+      navigate('/dashboard');
+    } else if (itemId === 'farms') {
+      navigate('/dashboard/farms');
+    } else if (currentFarmId) {
+      navigate(`/dashboard/farms/${currentFarmId}/${itemId}`);
+    } else {
+      navigate('/dashboard/farms');
+    }
+  };
+
   return (
     <aside className="flex h-full w-full flex-col justify-between rounded-[1.75rem] border border-white/10 bg-slate-950/70 p-4 shadow-[0_20px_70px_rgba(2,6,23,0.28)] backdrop-blur-xl">
       <div>
@@ -59,7 +77,7 @@ export function Sidebar({ activeSection, onSelect, onAddFarm }: SidebarProps) {
                 key={item.id}
                 whileHover={{ x: 2, scale: 1.01 }}
                 type="button"
-                onClick={() => onSelect(item.id)}
+                onClick={() => handleSelect(item.id)}
                 className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${active ? 'bg-emerald-500/15 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}`}
               >
                 <Icon className="size-4" />
