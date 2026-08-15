@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { FarmBoundary, SatelliteObservation } from '../services/sentinel2Service';
 
 export type FarmTimelineEvent = {
   id: string;
@@ -42,6 +43,10 @@ export type Farm = {
   currentCrop: string;
   documents: FarmDocument[];
   timeline: FarmTimelineEvent[];
+  boundary: FarmBoundary | null;
+  governmentRecordedArea: string;
+  boundaryCalculatedArea: string;
+  satelliteObservation: SatelliteObservation | null;
   carbon: {
     estimatedCredits: string;
     annualIncome: string;
@@ -67,19 +72,25 @@ export type Farm = {
   recommendations: string[];
 };
 
-type FarmDraft = Partial<Omit<Farm, 'id' | 'updated' | 'lastUpdated' | 'credits' | 'score' | 'status' | 'documents' | 'timeline' | 'verificationStatus'>> & {
+type FarmDraft = Partial<Omit<Farm, 'id' | 'updated' | 'lastUpdated' | 'credits' | 'score' | 'status' | 'documents' | 'timeline' | 'verificationStatus' | 'boundary' | 'governmentRecordedArea' | 'boundaryCalculatedArea' | 'satelliteObservation'>> & {
   credits?: string;
   score?: string;
   status?: string;
   verificationStatus?: string;
   documents?: FarmDocument[] | string[];
   timeline?: FarmTimelineEvent[];
+  boundary?: FarmBoundary | null;
+  governmentRecordedArea?: string;
+  boundaryCalculatedArea?: string;
+  satelliteObservation?: SatelliteObservation | null;
 };
 
 type FarmsContextValue = {
   farms: Farm[];
   addFarm: (farm: FarmDraft) => Farm;
   getFarmById: (id: string) => Farm | undefined;
+  updateFarm: (id: string, updates: Partial<Farm>) => void;
+  addTimelineEvent: (farmId: string, event: FarmTimelineEvent) => void;
 };
 
 const FarmsContext = createContext<FarmsContextValue | undefined>(undefined);
@@ -166,6 +177,8 @@ function normalizeFarm(farm: Partial<Farm> & Record<string, unknown>): Farm {
   const soil = farm.soil as Partial<Farm['soil']> | undefined;
   const weather = farm.weather as Partial<Farm['weather']> | undefined;
   const satellite = farm.satellite as Partial<Farm['satellite']> | undefined;
+  const boundary = farm.boundary as FarmBoundary | undefined;
+  const satelliteObservation = farm.satelliteObservation as SatelliteObservation | undefined;
 
   return {
     id: farm.id ?? createFarmId(),
@@ -190,6 +203,10 @@ function normalizeFarm(farm: Partial<Farm> & Record<string, unknown>): Farm {
     currentCrop: farm.currentCrop ?? 'Cereals',
     documents: normalizeDocuments(farm.documents),
     timeline: normalizeTimeline(farm.timeline),
+    boundary: boundary ?? null,
+    governmentRecordedArea: (farm.governmentRecordedArea as string) ?? farm.area ?? '0 acres',
+    boundaryCalculatedArea: (farm.boundaryCalculatedArea as string) ?? 'Not calculated',
+    satelliteObservation: satelliteObservation ?? null,
     carbon: {
       estimatedCredits: carbon?.estimatedCredits ?? '0 credits',
       annualIncome: carbon?.annualIncome ?? '₹0',
@@ -389,6 +406,10 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
         { id: 'timeline-2', title: 'AI Analysis Completed', description: 'Farm profile generated from the uploaded document.', date: 'Just now', status: 'Completed', icon: 'sparkles' },
         { id: 'timeline-3', title: 'Farm Registered', description: 'Digital farm profile is now active.', date: 'Just now', status: 'Completed', icon: 'leaf' },
       ],
+      boundary: farm.boundary ?? null,
+      governmentRecordedArea: farm.governmentRecordedArea ?? farm.area ?? '0 acres',
+      boundaryCalculatedArea: farm.boundaryCalculatedArea ?? 'Not calculated',
+      satelliteObservation: farm.satelliteObservation ?? null,
       carbon: {
         estimatedCredits: '0 credits',
         annualIncome: '₹0',
@@ -418,13 +439,43 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
     return createdFarm;
   };
 
+  const updateFarm = (id: string, updates: Partial<Farm>) => {
+    setFarms((current) =>
+      current.map((farm) => {
+        if (farm.id !== id) {
+          return farm;
+        }
+        return {
+          ...farm,
+          ...updates,
+          lastUpdated: 'Just now',
+        };
+      }),
+    );
+  };
+
+  const addTimelineEvent = (farmId: string, event: FarmTimelineEvent) => {
+    setFarms((current) =>
+      current.map((farm) => {
+        if (farm.id !== farmId) {
+          return farm;
+        }
+        return {
+          ...farm,
+          timeline: [event, ...farm.timeline],
+          lastUpdated: 'Just now',
+        };
+      }),
+    );
+  };
+
   const getFarmById = useMemo(
     () => (id: string) => farms.find((farm) => farm.id === id),
     [farms],
   );
 
   const value = useMemo(
-    () => ({ farms, addFarm, getFarmById }),
+    () => ({ farms, addFarm, getFarmById, updateFarm, addTimelineEvent }),
     [farms, getFarmById],
   );
 
