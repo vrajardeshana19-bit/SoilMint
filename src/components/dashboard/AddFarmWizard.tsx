@@ -5,8 +5,9 @@ import toast from 'react-hot-toast';
 import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 import { useFarms } from '../../contexts/FarmsContext';
 import { analyzeFarmRecord, type FarmRecord } from '../../services/farmRecordAnalyzer';
-import { getBestSatelliteDataForFarm, type FarmBoundary } from '../../services/sentinel2Service';
-import { BoundaryDrawer } from './BoundaryDrawer';
+import { createFarmBoundary, getBestSatelliteDataForFarm, type FarmBoundary, type GeoJSONPolygon } from '../../services/sentinel2Service';
+import { geocodeFarmLocation, type GeocodedLocation } from '../../services/geocodingService';
+import { FarmBoundaryMap } from './FarmBoundaryMap';
 import { SatelliteIntelligence } from './SatelliteIntelligence';
 import type { SatelliteObservation } from '../../services/sentinel2Service';
 
@@ -24,6 +25,8 @@ type WizardState = {
   farmRecord: FarmRecord | null;
   boundary: FarmBoundary | null;
   satelliteObservation: SatelliteObservation | null;
+  location: GeocodedLocation | null;
+  locationConfirmed: boolean;
   processingIndex: number;
   isAnalyzing: boolean;
   isSearchingSatellite: boolean;
@@ -60,6 +63,16 @@ const analysisProcessingSteps = [
   'Generating profile',
 ];
 
+function areaInSquareMeters(value: string | null, unit: string | null) {
+  const amount = value ? Number(value.replace(',', '.').match(/[\d.]+/)?.[0]) : NaN;
+  if (!Number.isFinite(amount)) return null;
+  const normalized = (unit || '').toLowerCase();
+  if (normalized.includes('hectare') || normalized === 'ha') return amount * 10000;
+  if (normalized.includes('acre')) return amount * 4046.8564224;
+  if (normalized.includes('square metre') || normalized.includes('square meter') || normalized === 'm2') return amount;
+  return null;
+}
+
 export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) {
   const { addFarm } = useFarms();
   const { setCurrentFarmId } = useCurrentFarm();
@@ -70,6 +83,8 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
     farmRecord: null,
     boundary: null,
     satelliteObservation: null,
+    location: null,
+    locationConfirmed: false,
     processingIndex: 0,
     isAnalyzing: false,
     isSearchingSatellite: false,
@@ -95,6 +110,8 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
           farmRecord: parsed.farmRecord ?? null,
           boundary: parsed.boundary ?? null,
           satelliteObservation: parsed.satelliteObservation ?? null,
+          location: parsed.location ?? null,
+          locationConfirmed: parsed.locationConfirmed ?? false,
         }));
       } catch {
         window.localStorage.removeItem(storageKey);
@@ -112,6 +129,8 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       farmRecord: state.farmRecord,
       boundary: state.boundary,
       satelliteObservation: state.satelliteObservation,
+      location: state.location,
+      locationConfirmed: state.locationConfirmed,
     };
     window.localStorage.setItem(storageKey, JSON.stringify(dataToStore));
   }, [state, open]);
@@ -197,11 +216,15 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       }));
 
       if (result.success && result.record) {
+        const geocoding = await geocodeFarmLocation(result.record);
         setState((current) => ({
           ...current,
           farmRecord: result.record,
+          location: geocoding.status === 'resolved' ? geocoding.location : null,
+          locationConfirmed: false,
           step: 4,
         }));
+        if (geocoding.status !== 'resolved') toast.error(geocoding.message);
         toast.success('Document analyzed successfully!');
       } else {
         toast.error(result.errors[0] || 'Document analysis failed');
@@ -217,14 +240,16 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
     }
   };
 
-  const handleBoundarySave = (boundary: FarmBoundary) => {
+  const handleBoundarySave = (geometry: GeoJSONPolygon) => {
+    if (!state.locationConfirmed) {
+      toast.error('Confirm the farm location before saving the boundary.');
+      return;
+    }
+    const boundary = createFarmBoundary(geometry, createdFarmId || 'new-farm');
     setState((current) => ({
       ...current,
-      boundary: { ...boundary, status: 'confirmed' },
-      step: 6,
-      isSearchingSatellite: true,
+      boundary,
     }));
-    toast.success('Farm boundary saved. Searching for satellite data...');
   };
 
   const handleFieldChange = (field: keyof FarmRecord, value: string | null) => {
@@ -232,6 +257,10 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       ...current,
       farmRecord: current.farmRecord ? { ...current.farmRecord, [field]: value } : null,
     }));
+  };
+
+  const handleLocationChange = (location: GeocodedLocation) => {
+    setState((current) => ({ ...current, location, locationConfirmed: false, boundary: null }));
   };
 
   const handleCreateFarm = () => {
@@ -245,6 +274,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       location: state.farmRecord.village && state.farmRecord.state
         ? `${state.farmRecord.village}, ${state.farmRecord.state}`
         : 'Pending location',
+      locationDetails: state.location,
       area: state.farmRecord.area ? `${state.farmRecord.area} ${state.farmRecord.areaUnit}` : '0 acres',
       ownerName: state.farmRecord.ownerName || 'Farmer',
       surveyNumber: state.farmRecord.surveyNumber || 'Pending',
@@ -268,6 +298,9 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       governmentRecordedArea: state.farmRecord.area
         ? `${state.farmRecord.area} ${state.farmRecord.areaUnit}`
         : '0 acres',
+      governmentRecordedAreaUnit: state.farmRecord.areaUnit || 'unknown',
+      boundaryArea: state.boundary?.areaSquareMeters ?? null,
+      boundaryAreaUnit: 'square metre',
       boundaryCalculatedArea: state.boundary
         ? `${state.boundary.areaAcres.toFixed(2)} acres`
         : 'Not calculated',
@@ -352,7 +385,17 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
         setState((current) => ({ ...current, step: 5 }));
         break;
       case 5:
-        // Boundary selection happens in BoundaryDrawer
+        if (!state.locationConfirmed || !state.boundary) {
+          toast.error('Confirm the location and draw a boundary before continuing.');
+          return;
+        }
+        setState((current) => ({
+          ...current,
+          boundary: current.boundary ? { ...current.boundary, status: 'confirmed', confirmedAt: new Date().toISOString() } : null,
+          step: 6,
+          isSearchingSatellite: true,
+        }));
+        toast.success('Farm boundary confirmed. Searching Sentinel-2 data...');
         break;
       case 6:
         // Satellite search is automatic, then create farm
@@ -383,6 +426,8 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       farmRecord: null,
       boundary: null,
       satelliteObservation: null,
+      location: null,
+      locationConfirmed: false,
       processingIndex: 0,
       isAnalyzing: false,
       isSearchingSatellite: false,
@@ -599,21 +644,28 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       case 5:
         return state.farmRecord && state.file ? (
           <div className="space-y-4">
-            <div className="rounded-[1.1rem] border border-emerald-400/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-              <p>
-                <span className="font-semibold">Location:</span> {state.farmRecord.village}, {state.farmRecord.district}, {state.farmRecord.state}
-              </p>
-              <p className="mt-2">
-                <span className="font-semibold">Government Record Area:</span> {state.farmRecord.area} {state.farmRecord.areaUnit}
-              </p>
-              <p className="mt-2 text-xs text-slate-400">Draw your farm boundary on the map below. Ensure it accurately represents your farm area.</p>
+            <div className="rounded-[1.1rem] border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-300">
+              <p className="font-semibold text-white">Detected Farm Location</p>
+              <p className="mt-1">{state.location?.formattedAddress || 'Location not resolved from the land record'}</p>
+              {state.location && <p className="mt-2 text-xs text-slate-400">Coordinates: {state.location.latitude.toFixed(6)}, {state.location.longitude.toFixed(6)}</p>}
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={() => setState((current) => ({ ...current, locationConfirmed: true }))} disabled={!state.location} className="rounded-lg border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-200 disabled:opacity-40">Confirm Location</button>
+                <button type="button" onClick={() => setState((current) => ({ ...current, locationConfirmed: false }))} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300">Change Location</button>
+              </div>
             </div>
-            <BoundaryDrawer
-              farmId={createdFarmId || 'new-farm'}
-              onBoundarySave={handleBoundarySave}
-              centerLat={state.farmRecord.village === 'Bharuch' ? 21.6453 : state.farmRecord.village === 'Sangli' ? 16.844 : 20.0}
-              centerLon={state.farmRecord.village === 'Bharuch' ? 72.4942 : state.farmRecord.village === 'Sangli' ? 75.3288 : 78.0}
+            <FarmBoundaryMap
+              location={state.location}
+              geometry={state.boundary?.geometry || null}
+              onLocationChange={handleLocationChange}
+              onGeometryChange={(geometry) => {
+                if (!geometry) {
+                  setState((current) => ({ ...current, boundary: null }));
+                } else if (state.locationConfirmed) {
+                  handleBoundarySave(geometry);
+                }
+              }}
             />
+            {state.boundary && <div className="rounded-[1.1rem] border border-white/10 bg-slate-950/60 p-4 text-sm"><p className="text-slate-300">Government record: <span className="font-semibold text-white">{state.farmRecord.area || 'Not detected'} {state.farmRecord.areaUnit || ''}</span></p><p className="mt-1 text-slate-300">Mapped boundary: <span className="font-semibold text-white">{state.boundary.areaHectares.toFixed(3)} hectares</span></p>{(() => { const recorded = areaInSquareMeters(state.farmRecord.area, state.farmRecord.areaUnit); const difference = recorded ? Math.abs(state.boundary.areaSquareMeters - recorded) / recorded * 100 : null; return difference === null ? <p className="mt-2 text-xs text-slate-400">Difference unavailable because this regional unit has no verified conversion configured.</p> : <p className={`mt-2 text-xs ${difference > 10 ? 'text-amber-200' : 'text-emerald-200'}`}>Difference: {difference.toFixed(1)}%{difference > 10 ? ' · Mapped area differs from the area recorded in your land document. Please verify the boundary.' : ''}</p>; })()}</div>}
           </div>
         ) : null;
 
@@ -684,7 +736,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
   const isNextDisabled =
     (state.step === 2 && !state.file) ||
     (state.step === 3 && state.isAnalyzing) ||
-    (state.step === 5 && !state.boundary) ||
+    (state.step === 5 && (!state.boundary || !state.locationConfirmed)) ||
     (state.step === 6 && state.isSearchingSatellite);
 
   return (

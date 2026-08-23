@@ -129,66 +129,35 @@ export function createFarmBoundary(
  * In production, this would query the Copernicus Data Space Ecosystem API
  */
 export async function searchSentinel2Imagery(
-  _boundary: FarmBoundary,
+  boundary: FarmBoundary,
   options?: {
     startDate?: string;
     endDate?: string;
     maxCloudCoverage?: number;
   },
 ): Promise<SatelliteMetadata[]> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  const endpoint = import.meta.env.VITE_SENTINEL2_SEARCH_URL;
+  if (!endpoint) {
+    return [];
+  }
 
   const maxCloud = options?.maxCloudCoverage ?? 30;
-
-  // Simulate finding satellite imagery
-  // In production, this would query Copernicus API with:
-  // - boundary.geometry (AOI polygon)
-  // - Date range
-  // - Cloud coverage filter
-  // - Processing level (L2A)
-
-  const simulatedResults: SatelliteMetadata[] = [
-    {
-      id: `S2-${Date.now()}-001`,
-      satelliteMission: 'Sentinel-2A',
-      productId: 'S2A_MSIL2A_20260812T050701_N0509_R034_T42RXP_20260812T074208.SAFE',
-      acquisitionDate: '2026-08-12',
-      sensingTime: '2026-08-12T05:07:01Z',
-      cloudCoverage: 8,
-      thumbnailUrl: null,
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      aoi: boundary.geometry,
+      startDate: options?.startDate,
+      endDate: options?.endDate,
+      maxCloudCoverage: maxCloud,
       processingLevel: 'Level-2A',
-      dataSource: 'Copernicus Data Space Ecosystem',
-      status: 'selected',
-    },
-    {
-      id: `S2-${Date.now()}-002`,
-      satelliteMission: 'Sentinel-2B',
-      productId: 'S2B_MSIL2A_20260810T050629_N0509_R034_T42RXP_20260810T073628.SAFE',
-      acquisitionDate: '2026-08-10',
-      sensingTime: '2026-08-10T05:06:29Z',
-      cloudCoverage: 22,
-      thumbnailUrl: null,
-      processingLevel: 'Level-2A',
-      dataSource: 'Copernicus Data Space Ecosystem',
-      status: 'discovered',
-    },
-    {
-      id: `S2-${Date.now()}-003`,
-      satelliteMission: 'Sentinel-2A',
-      productId: 'S2A_MSIL2A_20260805T050701_N0509_R034_T42RXP_20260805T074208.SAFE',
-      acquisitionDate: '2026-08-05',
-      sensingTime: '2026-08-05T05:07:01Z',
-      cloudCoverage: 45,
-      thumbnailUrl: null,
-      processingLevel: 'Level-2A',
-      dataSource: 'Copernicus Data Space Ecosystem',
-      status: 'discovered',
-    },
-  ];
-
-  // Filter by cloud coverage
-  return simulatedResults.filter((result) => result.cloudCoverage <= maxCloud);
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('Satellite data provider unavailable');
+  }
+  const results = await response.json() as SatelliteMetadata[];
+  return results.filter((result) => result.cloudCoverage <= maxCloud);
 }
 
 /**
@@ -266,7 +235,9 @@ export async function getBestSatelliteDataForFarm(
         discoveredAt: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
         status: 'no_data',
-        message: 'No suitable satellite imagery found for the specified date range and cloud coverage threshold.',
+        message: import.meta.env.VITE_SENTINEL2_SEARCH_URL
+          ? 'No suitable Sentinel-2 imagery found for the specified date range and cloud coverage threshold.'
+          : 'Satellite connection not configured. Connect a Copernicus service to search this boundary.',
       };
     }
 

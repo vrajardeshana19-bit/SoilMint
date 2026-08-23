@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { FarmBoundary, SatelliteObservation } from '../services/sentinel2Service';
+import type { GeocodedLocation } from '../services/geocodingService';
 
 export type FarmTimelineEvent = {
   id: string;
@@ -24,6 +25,7 @@ export type Farm = {
   id: string;
   name: string;
   location: string;
+  locationDetails: GeocodedLocation | null;
   area: string;
   credits: string;
   score: string;
@@ -45,6 +47,9 @@ export type Farm = {
   timeline: FarmTimelineEvent[];
   boundary: FarmBoundary | null;
   governmentRecordedArea: string;
+  governmentRecordedAreaUnit: string;
+  boundaryArea: number | null;
+  boundaryAreaUnit: string;
   boundaryCalculatedArea: string;
   satelliteObservation: SatelliteObservation | null;
   carbon: {
@@ -184,6 +189,7 @@ function normalizeFarm(farm: Partial<Farm> & Record<string, unknown>): Farm {
     id: farm.id ?? createFarmId(),
     name: farm.name ?? 'Digital Farm',
     location: farm.location ?? 'Unknown location',
+    locationDetails: (farm.locationDetails as GeocodedLocation | null | undefined) ?? null,
     area: farm.area ?? '0 acres',
     credits: farm.credits ?? '0 credits',
     score: farm.score ?? '84/100',
@@ -205,6 +211,9 @@ function normalizeFarm(farm: Partial<Farm> & Record<string, unknown>): Farm {
     timeline: normalizeTimeline(farm.timeline),
     boundary: boundary ?? null,
     governmentRecordedArea: (farm.governmentRecordedArea as string) ?? farm.area ?? '0 acres',
+    governmentRecordedAreaUnit: (farm.governmentRecordedAreaUnit as string) ?? 'acres',
+    boundaryArea: typeof farm.boundaryArea === 'number' ? farm.boundaryArea : boundary?.areaSquareMeters ?? null,
+    boundaryAreaUnit: (farm.boundaryAreaUnit as string) ?? 'square metre',
     boundaryCalculatedArea: (farm.boundaryCalculatedArea as string) ?? 'Not calculated',
     satelliteObservation: satelliteObservation ?? null,
     carbon: {
@@ -383,6 +392,7 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
       id: createFarmId(),
       name: farm.name,
       location: farm.location,
+      locationDetails: farm.locationDetails ?? null,
       area: farm.area,
       credits: farm.credits ?? '0 credits',
       score: farm.score ?? '84/100',
@@ -408,6 +418,9 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
       ],
       boundary: farm.boundary ?? null,
       governmentRecordedArea: farm.governmentRecordedArea ?? farm.area ?? '0 acres',
+      governmentRecordedAreaUnit: farm.governmentRecordedAreaUnit ?? 'acres',
+      boundaryArea: farm.boundaryArea ?? farm.boundary?.areaSquareMeters ?? null,
+      boundaryAreaUnit: farm.boundaryAreaUnit ?? 'square metre',
       boundaryCalculatedArea: farm.boundaryCalculatedArea ?? 'Not calculated',
       satelliteObservation: farm.satelliteObservation ?? null,
       carbon: {

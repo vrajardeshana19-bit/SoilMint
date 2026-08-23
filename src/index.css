@@ -3,6 +3,29 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+.soilmint-location-marker span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid white;
+  border-radius: 999px;
+  background: #059669;
+  box-shadow: 0 0 0 5px rgb(16 185 129 / 25%);
+}
+
+.soilmint-vertex-marker span {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid white;
+  border-radius: 999px;
+  background: #047857;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

@@ -75,11 +75,18 @@ export async function validateLandRecord(file: File): Promise<{ valid: boolean; 
     return { valid: false, error: `Unsupported file type: ${file.type}. Supported: PDF, PNG, JPG, JPEG` };
   }
 
+  if (mimeType === 'application/pdf') {
+    const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    if (String.fromCharCode(...header) !== '%PDF-') {
+      return { valid: false, error: 'Invalid or corrupted PDF file' };
+    }
+  }
+
   // For images, try basic validation
   if (mimeType.startsWith('image/')) {
     try {
       await validateImageFile(file);
-    } catch (error) {
+    } catch {
       return { valid: false, error: 'Invalid or corrupted image file' };
     }
   }
@@ -106,47 +113,19 @@ async function validateImageFile(file: File): Promise<void> {
   }
 }
 
-/**
- * Simulate OCR extraction from land record document
- * In production, this would call a real OCR service like Tesseract, AWS Textract, or Google Vision
- */
+/** Call the configured OCR/document-analysis backend. Keep credentials server-side. */
 async function extractTextFromDocument(file: File): Promise<string> {
-  // Simulate OCR processing with a delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // In a real implementation, this would:
-  // 1. Send file to OCR service (Tesseract, Textract, Vision API)
-  // 2. Get back extracted text with confidence scores
-  // 3. Handle different document formats and languages
-
-  // For now, return simulated text based on file name to support testing
-  const simulatedTexts: Record<string, string> = {
-    'land_record.pdf':
-      'Government Land Record Survey Number SR-104/12 Village Bharuch Taluk Bharuch District Bharuch State Gujarat Owner Name Ramesh Patel Area 24 acres Land Classification Dryland Crop Groundnut',
-    'farm_survey.pdf':
-      'Survey Number MB-221/9 Village Sangli Taluk Sangli District Sangli State Maharashtra Owner Anil Sharma Area 18 acres Classification Irrigated Crop Sugarcane',
-    'land_document.pdf':
-      'Land Record Sub-Survey 45-A Village Nashik Taluk Nashik District Nashik State Maharashtra Farmer Name Vikram Singh Area 12 acres Classification Mixed Crop Wheat Sugarcane',
-  };
-
-  const fileName = file.name.toLowerCase();
-  for (const [key, text] of Object.entries(simulatedTexts)) {
-    if (fileName.includes(key.replace('.pdf', ''))) {
-      return text;
-    }
+  const endpoint = import.meta.env.VITE_DOCUMENT_ANALYZER_URL;
+  if (!endpoint) {
+    throw new Error('Document analysis service not configured. No extracted values were created.');
   }
-
-  // Default simulated extraction
-  return `Government Land Record
-         Survey Number: SR-104/12
-         Village: Village Name
-         Taluk: Taluk Name
-         District: District Name
-         State: State Name
-         Owner Name: Farm Owner
-         Area: 20 acres
-         Land Classification: Agricultural
-         Crop: Cereals`;
+  const body = new FormData();
+  body.append('document', file, file.name);
+  const response = await fetch(endpoint, { method: 'POST', body, headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error('Document analysis service could not read this file.');
+  const result = await response.json() as { text?: string };
+  if (!result.text?.trim()) throw new Error('The document was unreadable. No extracted values were created.');
+  return result.text;
 }
 
 /**
