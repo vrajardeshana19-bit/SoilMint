@@ -27,7 +27,11 @@ export function Topbar({ title, subtitle, onSearch, farms, currentFarmId, onFarm
           <Search className="size-4" />
           Search
         </button>
-        <button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200">
+        <button
+          type="button"
+          aria-label="View notifications"
+          className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+        >
           <Bell className="size-4" />
         </button>
         <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
@@ -49,7 +53,11 @@ export function Topbar({ title, subtitle, onSearch, farms, currentFarmId, onFarm
             </select>
           </div>
         </label>
-        <button type="button" className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200">
+        <button
+          type="button"
+          aria-label="Toggle theme"
+          className="rounded-2xl border border-white/10 bg-white/5 p-2.5 text-slate-400 transition hover:bg-white/10 hover:text-slate-200"
+        >
           <SunMoon className="size-4" />
         </button>
       </div>
