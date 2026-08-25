@@ -79,16 +79,16 @@ export function FarmCard({ id, name, village, state, area, status, credits, scor
         <button type="button" onClick={() => {
           setCurrentFarmId(id);
           navigate(`/dashboard/farms/${id}`);
-        }} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10">
+        }} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
           Open Farm
         </button>
-        <button type="button" onClick={openCarbon} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 transition hover:bg-emerald-500/15">
+        <button type="button" onClick={openCarbon} className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 transition hover:bg-emerald-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
           Analyze
         </button>
         <button type="button" onClick={() => {
           setCurrentFarmId(id);
           navigate(`/dashboard/farms/${id}/timeline`);
-        }} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10">
+        }} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
           View Timeline
         </button>
       </div>
