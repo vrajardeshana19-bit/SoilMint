@@ -94,6 +94,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
 
   const [dragActive, setDragActive] = useState(false);
   const [createdFarmId, setCreatedFarmId] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FarmRecord, string>>>({});
 
   // Load progress from storage
   useEffect(() => {
@@ -253,10 +254,32 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
   };
 
   const handleFieldChange = (field: keyof FarmRecord, value: string | null) => {
+    setFieldErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
     setState((current) => ({
       ...current,
       farmRecord: current.farmRecord ? { ...current.farmRecord, [field]: value } : null,
     }));
+  };
+
+  const validateFarmRecord = () => {
+    const farmRecord = state.farmRecord;
+    const errors: Partial<Record<keyof FarmRecord, string>> = {};
+
+    if (!farmRecord?.farmName?.trim()) {
+      errors.farmName = 'Enter a farm name to continue.';
+    }
+
+    if (!farmRecord?.area?.trim() || !Number.isFinite(Number(farmRecord.area)) || Number(farmRecord.area) <= 0) {
+      errors.area = 'Enter a land area greater than 0 to continue.';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleLocationChange = (location: GeocodedLocation) => {
@@ -382,6 +405,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
           toast.error('Farm record is missing');
           return;
         }
+        if (!validateFarmRecord()) return;
         setState((current) => ({ ...current, step: 5 }));
         break;
       case 5:
@@ -435,6 +459,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       analysisWarnings: [],
     });
     setCreatedFarmId(null);
+    setFieldErrors({});
     window.localStorage.removeItem('soilmint-add-farm-progress-v2');
     onClose();
   };
@@ -618,14 +643,17 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
                   ['ownership', 'Ownership'],
                 ] as const
               ).map(([key, label]) => (
-                <label key={key} className="rounded-[1.1rem] border border-white/10 bg-slate-950/60 p-3">
+                <label key={key} className={`rounded-[1.1rem] border bg-slate-950/60 p-3 ${fieldErrors[key] ? 'border-red-400/60' : 'border-white/10'}`}>
                   <span className="mb-2 block text-xs uppercase tracking-[0.24em] text-slate-500">{label}</span>
                   <input
+                    aria-describedby={fieldErrors[key] ? `${key}-error` : undefined}
+                    aria-invalid={Boolean(fieldErrors[key])}
                     value={state.farmRecord?.[key] ?? ''}
                     onChange={(event) => handleFieldChange(key, event.target.value || null)}
                     placeholder="Not detected"
                     className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
                   />
+                  {fieldErrors[key] && <p id={`${key}-error`} className="mt-2 text-xs text-red-300">{fieldErrors[key]}</p>}
                 </label>
               ))}
             </div>
