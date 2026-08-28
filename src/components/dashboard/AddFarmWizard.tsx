@@ -30,6 +30,7 @@ type WizardState = {
   processingIndex: number;
   isAnalyzing: boolean;
   isSearchingSatellite: boolean;
+  satelliteSearchError: string | null;
   analysisErrors: string[];
   analysisWarnings: string[];
 };
@@ -88,6 +89,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
     processingIndex: 0,
     isAnalyzing: false,
     isSearchingSatellite: false,
+    satelliteSearchError: null,
     analysisErrors: [],
     analysisWarnings: [],
   });
@@ -159,16 +161,25 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
     if (!state.isSearchingSatellite) return;
 
     const timer = window.setTimeout(async () => {
-      if (state.boundary) {
-        const observation = await getBestSatelliteDataForFarm(
-          createdFarmId || 'temp-farm',
-          state.boundary,
-          { maxCloudCoverage: 30 },
-        );
+      try {
+        if (state.boundary) {
+          const observation = await getBestSatelliteDataForFarm(
+            createdFarmId || 'temp-farm',
+            state.boundary,
+            { maxCloudCoverage: 30 },
+          );
+          setState((current) => ({
+            ...current,
+            satelliteObservation: observation,
+            isSearchingSatellite: false,
+            satelliteSearchError: null,
+          }));
+        }
+      } catch {
         setState((current) => ({
           ...current,
-          satelliteObservation: observation,
           isSearchingSatellite: false,
+          satelliteSearchError: 'Satellite data could not be retrieved right now. Please try again.',
         }));
       }
     }, 2000);
@@ -418,6 +429,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
           boundary: current.boundary ? { ...current.boundary, status: 'confirmed', confirmedAt: new Date().toISOString() } : null,
           step: 6,
           isSearchingSatellite: true,
+          satelliteSearchError: null,
         }));
         toast.success('Farm boundary confirmed. Searching Sentinel-2 data...');
         break;
@@ -455,6 +467,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       processingIndex: 0,
       isAnalyzing: false,
       isSearchingSatellite: false,
+      satelliteSearchError: null,
       analysisErrors: [],
       analysisWarnings: [],
     });
@@ -705,6 +718,24 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
             )}
             {!state.isSearchingSatellite && state.satelliteObservation && (
               <SatelliteIntelligence observation={state.satelliteObservation} />
+            )}
+            {!state.isSearchingSatellite && state.satelliteSearchError && (
+              <div className="rounded-[1.1rem] border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-300" />
+                  <div>
+                    <p className="font-semibold">Satellite search unavailable</p>
+                    <p className="mt-1 text-red-200/80">{state.satelliteSearchError}</p>
+                    <button
+                      type="button"
+                      onClick={() => setState((current) => ({ ...current, isSearchingSatellite: true, satelliteSearchError: null }))}
+                      className="mt-3 rounded-lg border border-red-300/20 bg-red-400/10 px-3 py-2 text-sm font-medium text-red-100 transition hover:bg-red-400/20"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
             {!state.isSearchingSatellite && !state.satelliteObservation && (
               <div className="rounded-[1.1rem] border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-400">
