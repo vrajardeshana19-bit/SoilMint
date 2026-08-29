@@ -8,6 +8,8 @@ type User = {
   password: string;
   accountType: 'farmer' | 'buyer' | 'verifier';
   farms: string[];
+  farmName?: string;
+  location?: string;
   completedProfile: boolean;
   onboarded: boolean;
 };
@@ -16,9 +18,9 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => boolean;
-  signup: (payload: Omit<User, 'id' | 'farms' | 'completedProfile' | 'onboarded'>) => boolean;
+  signup: (payload: Omit<User, 'id' | 'farms' | 'farmName' | 'location' | 'completedProfile' | 'onboarded'>) => boolean;
   logout: () => void;
-  completeProfile: (name: string, phone: string) => void;
+  completeProfile: (name: string, phone: string, farmName?: string, location?: string) => void;
   completeOnboarding: () => void;
   setAccountType: (accountType: User['accountType']) => void;
 };
@@ -58,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const signup = (payload: Omit<User, 'id' | 'farms' | 'completedProfile' | 'onboarded'>) => {
+  const signup = (payload: Omit<User, 'id' | 'farms' | 'farmName' | 'location' | 'completedProfile' | 'onboarded'>) => {
     const nextUser: User = {
       id: `${Date.now()}`,
       farms: [],
@@ -74,8 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const completeProfile = (name: string, phone: string) => {
-    setUser((current) => (current ? { ...current, name, phone, completedProfile: true } : current));
+  const completeProfile = (name: string, phone: string, farmName?: string, location?: string) => {
+    setUser((current) => (current ? {
+      ...current,
+      name,
+      phone,
+      farmName: farmName?.trim() || current.farmName || '',
+      location: location?.trim() || current.location || '',
+      completedProfile: true,
+    } : current));
   };
 
   const completeOnboarding = () => {

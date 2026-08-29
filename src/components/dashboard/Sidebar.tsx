@@ -17,6 +17,7 @@ import {
   UserCircle2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 
 const navItems = [
@@ -40,7 +41,8 @@ type SidebarProps = {
 
 export function Sidebar({ activeSection, onSelect, onAddFarm }: SidebarProps) {
   const navigate = useNavigate();
-  const { currentFarmId } = useCurrentFarm();
+  const { logout } = useAuth();
+  const { currentFarmId, setCurrentFarmId } = useCurrentFarm();
 
   const handleSelect = (itemId: string) => {
     onSelect(itemId);
@@ -53,6 +55,12 @@ export function Sidebar({ activeSection, onSelect, onAddFarm }: SidebarProps) {
     } else {
       navigate('/dashboard/farms');
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCurrentFarmId(null);
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -111,7 +119,7 @@ export function Sidebar({ activeSection, onSelect, onAddFarm }: SidebarProps) {
           <ShieldCheck className="size-3.5 text-emerald-300" />
           Verified Farmer Profile
         </div>
-        <button type="button" className="mt-3 flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-200">
+        <button type="button" onClick={handleLogout} className="mt-3 flex items-center gap-2 text-sm text-slate-400 transition hover:text-slate-200">
           <LogOut className="size-4" />
           Logout
         </button>

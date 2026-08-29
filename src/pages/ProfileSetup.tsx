@@ -8,12 +8,22 @@ import { useAuth } from '../contexts/AuthContext';
 export default function ProfileSetup() {
   const navigate = useNavigate();
   const { completeProfile, user } = useAuth();
-  const [farmName, setFarmName] = useState('');
-  const [location, setLocation] = useState('');
+  const [farmName, setFarmName] = useState(user?.farmName ?? '');
+  const [location, setLocation] = useState(user?.location ?? '');
+  const [error, setError] = useState('');
+
+  const isValid = farmName.trim().length > 0 && location.trim().length > 0;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    completeProfile(user?.name ?? 'Farmer', user?.phone ?? '+91 00000 00000');
+
+    if (!isValid) {
+      setError('Please add both your farm name and location before continuing.');
+      return;
+    }
+
+    completeProfile(user?.name ?? 'Farmer', user?.phone ?? '+91 00000 00000', farmName.trim(), location.trim());
+    setError('');
     navigate('/onboarding');
   };
 
@@ -43,7 +53,9 @@ export default function ProfileSetup() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full">Continue</Button>
+        {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+
+        <Button type="submit" className="w-full" disabled={!isValid}>Continue</Button>
       </form>
     </AuthLayout>
   );
