@@ -385,6 +385,7 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
 
     setCreatedFarmId(createdFarm.id);
     setCurrentFarmId(createdFarm.id);
+    window.localStorage.removeItem('soilmint-add-farm-progress-v2');
     toast.success(`Farm ${createdFarm.name} created successfully!`);
 
     setState((current) => ({

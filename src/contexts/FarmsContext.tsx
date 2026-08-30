@@ -95,6 +95,7 @@ type FarmsContextValue = {
   addFarm: (farm: FarmDraft) => Farm;
   getFarmById: (id: string) => Farm | undefined;
   updateFarm: (id: string, updates: Partial<Farm>) => void;
+  deleteFarm: (id: string) => void;
   addTimelineEvent: (farmId: string, event: FarmTimelineEvent) => void;
 };
 
@@ -467,6 +468,10 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const deleteFarm = (id: string) => {
+    setFarms((current) => current.filter((farm) => farm.id !== id));
+  };
+
   const addTimelineEvent = (farmId: string, event: FarmTimelineEvent) => {
     setFarms((current) =>
       current.map((farm) => {
@@ -488,7 +493,7 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ farms, addFarm, getFarmById, updateFarm, addTimelineEvent }),
+    () => ({ farms, addFarm, getFarmById, updateFarm, deleteFarm, addTimelineEvent }),
     [farms, getFarmById],
   );
 
