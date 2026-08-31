@@ -10,6 +10,8 @@ type TopbarProps = {
 };
 
 export function Topbar({ title, subtitle, onSearch, farms, currentFarmId, onFarmSelect }: TopbarProps) {
+  const hasFarms = farms.length > 0;
+
   return (
     <div className="flex flex-col gap-3 rounded-[1.5rem] border border-white/10 bg-slate-950/70 px-4 py-4 shadow-[0_20px_70px_rgba(2,6,23,0.2)] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div>
@@ -42,14 +44,21 @@ export function Topbar({ title, subtitle, onSearch, farms, currentFarmId, onFarm
             <p className="font-medium text-white">Current Farm</p>
             <select
               value={currentFarmId ?? ''}
+              disabled={!hasFarms}
               onChange={(event) => onFarmSelect(event.target.value)}
-              className="bg-transparent text-xs text-slate-400 outline-none"
+              className="bg-transparent text-xs text-slate-400 outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {farms.map((farm) => (
-                <option key={farm.id} value={farm.id} className="bg-slate-900 text-slate-200">
-                  {farm.name}
+              {hasFarms ? (
+                farms.map((farm) => (
+                  <option key={farm.id} value={farm.id} className="bg-slate-900 text-slate-200">
+                    {farm.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" className="bg-slate-900 text-slate-200">
+                  No farms yet
                 </option>
-              ))}
+              )}
             </select>
           </div>
         </label>
