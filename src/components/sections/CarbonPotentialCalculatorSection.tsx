@@ -728,10 +728,11 @@ export function CarbonPotentialCalculatorSection() {
                       <button
                         type="button"
                         onClick={handleUseCurrentLocation}
-                        className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/15"
+                        disabled={locationStatus === 'loading'}
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <MapPin className="size-3.5" />
-                        Use Current Location
+                        {locationStatus === 'loading' ? <LoaderCircle className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />}
+                        {locationStatus === 'loading' ? 'Detecting...' : 'Use Current Location'}
                       </button>
                     }
                   />
