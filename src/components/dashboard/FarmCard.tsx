@@ -75,7 +75,7 @@ export function FarmCard({ id, name, village, state, area, status, credits, scor
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <button type="button" onClick={() => {
           setCurrentFarmId(id);
           navigate(`/dashboard/farms/${id}`);
