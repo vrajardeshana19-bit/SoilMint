@@ -682,7 +682,7 @@ export function CarbonPotentialCalculatorSection() {
             >
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Farm Size" id="farmSize">
+                  <Field label="Farm Size (in selected unit)" id="farmSize">
                     <input
                       id="farmSize"
                       type="number"
