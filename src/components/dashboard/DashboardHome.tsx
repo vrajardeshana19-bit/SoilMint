@@ -1,13 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, BarChart3, Bot, FileText, Leaf, Plus, Sprout, TrendingUp, Upload, Workflow } from 'lucide-react';
-
-const metrics = [
-  { label: 'Total Farms', value: '12', icon: Sprout, accent: 'text-emerald-300' },
-  { label: 'Estimated Carbon Credits', value: '428', icon: Leaf, accent: 'text-emerald-300' },
-  { label: 'Estimated Annual Income', value: '₹9.2L', icon: TrendingUp, accent: 'text-emerald-300' },
-  { label: 'Sustainability Score', value: '91/100', icon: BarChart3, accent: 'text-emerald-300' },
-  { label: 'Verified Documents', value: '18', icon: FileText, accent: 'text-emerald-300' },
-];
+import type { Farm } from '../../contexts/FarmsContext';
 
 const quickActions = [
   { title: 'Add Farm', subtitle: 'Create a new digital farm profile', icon: Plus },
@@ -19,6 +12,7 @@ const quickActions = [
 ];
 
 type DashboardHomeProps = {
+  farms: Farm[];
   onAddFarm?: () => void;
 };
 
@@ -30,7 +24,45 @@ const timeline = [
   'Marketplace Listing Created',
 ];
 
-export function DashboardHome({ onAddFarm }: DashboardHomeProps) {
+function numericValue(value: string) {
+  const parsed = Number.parseFloat(value.replace(/[^\d.]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCredits(value: number) {
+  return `${Math.round(value).toLocaleString('en-IN')} credits`;
+}
+
+function formatIncome(farms: Farm[]) {
+  const total = farms.reduce((sum, farm) => {
+    const income = numericValue(farm.carbon.annualIncome);
+    return sum + (farm.carbon.annualIncome.toUpperCase().includes('L') ? income * 100000 : income);
+  }, 0);
+
+  if (total >= 100000) {
+    return `₹${(total / 100000).toFixed(1)}L`;
+  }
+
+  return `₹${Math.round(total).toLocaleString('en-IN')}`;
+}
+
+export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
+  const totalCredits = farms.reduce((sum, farm) => sum + numericValue(farm.carbon.estimatedCredits), 0);
+  const averageScore = farms.length
+    ? Math.round(farms.reduce((sum, farm) => sum + numericValue(farm.soil.sustainabilityScore), 0) / farms.length)
+    : 0;
+  const verifiedDocuments = farms.reduce(
+    (count, farm) => count + farm.documents.filter((document) => document.status.toLowerCase() === 'verified').length,
+    0,
+  );
+  const metrics = [
+    { label: 'Total Farms', value: farms.length.toLocaleString('en-IN'), icon: Sprout, accent: 'text-emerald-300' },
+    { label: 'Estimated Carbon Credits', value: formatCredits(totalCredits), icon: Leaf, accent: 'text-emerald-300' },
+    { label: 'Estimated Annual Income', value: formatIncome(farms), icon: TrendingUp, accent: 'text-emerald-300' },
+    { label: 'Sustainability Score', value: `${averageScore}/100`, icon: BarChart3, accent: 'text-emerald-300' },
+    { label: 'Verified Documents', value: verifiedDocuments.toLocaleString('en-IN'), icon: FileText, accent: 'text-emerald-300' },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">

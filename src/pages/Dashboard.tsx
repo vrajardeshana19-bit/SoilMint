@@ -115,7 +115,7 @@ const Dashboard = () => {
             transition={{ duration: 0.25 }}
           >
             {activeSection === 'dashboard' && activeRoute === 'dashboard' ? (
-              <DashboardHome onAddFarm={() => setShowAddFarm(true)} />
+              <DashboardHome farms={farms} onAddFarm={() => setShowAddFarm(true)} />
             ) : activeSection === 'farms' && activeRoute === 'farms' ? (
               <div className="space-y-4">
                 {farms.length === 0 ? (
