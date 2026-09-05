@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronLeft, ChevronRight, AlertCircle, FileText, LoaderCircle, MapPinned, Sparkles, UploadCloud, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 import { useFarms } from '../../contexts/FarmsContext';
@@ -97,6 +97,9 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
   const [dragActive, setDragActive] = useState(false);
   const [createdFarmId, setCreatedFarmId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FarmRecord, string>>>({});
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const creationInProgress = useRef(false);
 
   // Load progress from storage
   useEffect(() => {
@@ -303,7 +306,15 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
       return;
     }
 
-    const createdFarm = addFarm({
+    if (creationInProgress.current) return;
+
+    creationInProgress.current = true;
+    setIsCreating(true);
+    setCreationError(null);
+
+    try {
+      const createdFarm = addFarm({
+
       name: state.farmRecord.farmName || 'Digital Farm',
       location: state.farmRecord.village && state.farmRecord.state
         ? `${state.farmRecord.village}, ${state.farmRecord.state}`
@@ -381,19 +392,29 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
             ]
           : []),
       ],
-    });
+      });
 
-    setCreatedFarmId(createdFarm.id);
-    setCurrentFarmId(createdFarm.id);
-    window.localStorage.removeItem('soilmint-add-farm-progress-v2');
-    toast.success(`Farm ${createdFarm.name} created successfully!`);
+      setCreatedFarmId(createdFarm.id);
+      setCurrentFarmId(createdFarm.id);
+      window.localStorage.removeItem('soilmint-add-farm-progress-v2');
+      toast.success(`Farm ${createdFarm.name} created successfully!`);
 
-    setState((current) => ({
-      ...current,
-      step: 7,
-    }));
+      setState((current) => ({
+        ...current,
+        step: 7,
+      }));
 
-    onCreated?.();
+      onCreated?.();
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Farm could not be created. Please try again.';
+      setCreationError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      creationInProgress.current = false;
+      setIsCreating(false);
+    }
   };
 
   const handleNext = () => {
@@ -474,6 +495,9 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
     });
     setCreatedFarmId(null);
     setFieldErrors({});
+    setCreationError(null);
+    setIsCreating(false);
+    creationInProgress.current = false;
     window.localStorage.removeItem('soilmint-add-farm-progress-v2');
     onClose();
   };
@@ -840,7 +864,18 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">{renderStepContent()}</div>
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+            {renderStepContent()}
+            {creationError && (
+              <div role="alert" className="mt-4 flex items-start gap-3 rounded-[1.1rem] border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-100">
+                <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-300" />
+                <div>
+                  <p className="font-semibold">Farm could not be created</p>
+                  <p className="mt-1 text-red-200/80">{creationError}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center justify-between border-t border-white/10 px-5 py-4 sm:px-6">
             <button
@@ -855,10 +890,12 @@ export function AddFarmWizard({ open, onClose, onCreated }: AddFarmWizardProps) 
             <button
               type="button"
               onClick={handleNext}
-              disabled={isNextDisabled}
+              disabled={isNextDisabled || isCreating}
               className="inline-flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
             >
-              {state.step === 7
+              {isCreating
+                ? 'Creating Farm...'
+                : state.step === 7
                 ? 'Close'
                 : state.step === 6
                   ? 'Create Farm'
