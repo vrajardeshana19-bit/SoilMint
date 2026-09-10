@@ -255,7 +255,15 @@ export function FarmDetailView() {
     return (
       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-8 text-center shadow-[0_20px_70px_rgba(2,6,23,0.16)] backdrop-blur-xl">
         <p className="text-lg font-semibold text-white">Farm not found</p>
-        <p className="mt-2 text-sm text-slate-400">The selected farm is not available right now.</p>
+        <p className="mt-2 text-sm text-slate-400">This farm may have been removed or the link may be outdated.</p>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/farms')}
+          className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200 transition hover:bg-white/10"
+        >
+          <ArrowLeft className="size-4" />
+          Back to My Farms
+        </button>
       </div>
     );
   }
