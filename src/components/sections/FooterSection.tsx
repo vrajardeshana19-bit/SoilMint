@@ -16,7 +16,7 @@ export function FooterSection() {
           <Link to="/about" className="transition hover:text-slate-950">
             Terms
           </Link>
-          <Link to="/marketplace" className="transition hover:text-slate-950">
+          <Link to="/contact" className="transition hover:text-slate-950">
             Contact
           </Link>
         </div>
