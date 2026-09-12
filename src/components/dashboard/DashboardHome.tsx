@@ -47,7 +47,8 @@ function formatIncome(farms: Farm[]) {
 }
 
 export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
-  const totalCredits = farms.reduce((sum, farm) => sum + numericValue(farm.carbon.estimatedCredits), 0);
+  const totalCredits = farms.reduce((sum, farm) => sum + numericValue(farm.credits), 0);
+
   const averageScore = farms.length
     ? Math.round(farms.reduce((sum, farm) => sum + numericValue(farm.soil.sustainabilityScore), 0) / farms.length)
     : 0;
