@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrentFarm } from '../contexts/CurrentFarmContext';
+import { useFarms } from '../contexts/FarmsContext';
 
 const steps = [
   { icon: FileText, title: 'Upload Government Land Record', description: 'Add your land documentation and verify your farm profile.' },
@@ -14,9 +16,14 @@ const steps = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const { completeOnboarding } = useAuth();
+  const { currentFarmId } = useCurrentFarm();
+  const { addActivity } = useFarms();
 
   const handleContinue = () => {
     completeOnboarding();
+    if (currentFarmId) {
+      addActivity(currentFarmId, 'Farm setup completed', 'Farm setup and onboarding were completed successfully.', 'setup_completed');
+    }
     navigate('/dashboard');
   };
 

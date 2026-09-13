@@ -21,6 +21,17 @@ export type FarmDocument = {
   confidence: string;
 };
 
+export type FarmActivityType = 'created' | 'updated' | 'saved' | 'deleted' | 'setup_completed';
+
+export type FarmActivity = {
+  id: string;
+  farmId: string;
+  type: FarmActivityType;
+  title: string;
+  description: string;
+  createdAt: string;
+};
+
 export type Farm = {
   id: string;
   name: string;
@@ -92,8 +103,11 @@ type FarmDraft = Partial<Omit<Farm, 'id' | 'updated' | 'lastUpdated' | 'credits'
 
 type FarmsContextValue = {
   farms: Farm[];
+  activities: FarmActivity[];
   addFarm: (farm: FarmDraft) => Farm;
   getFarmById: (id: string) => Farm | undefined;
+  getFarmActivities: (farmId: string) => FarmActivity[];
+  addActivity: (farmId: string, title: string, description: string, type: FarmActivityType) => FarmActivity;
   updateFarm: (id: string, updates: Partial<Farm>) => void;
   deleteFarm: (id: string) => void;
   addTimelineEvent: (farmId: string, event: FarmTimelineEvent) => void;
@@ -102,6 +116,8 @@ type FarmsContextValue = {
 const FarmsContext = createContext<FarmsContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'soilmint-farms';
+const ACTIVITY_STORAGE_KEY = 'soilmint-activity-history';
+const ACTIVITY_LIMIT = 80;
 
 function createFarmId() {
   return `farm-${Math.random().toString(36).slice(2, 8)}`;
@@ -379,14 +395,73 @@ function readStoredFarms() {
   }
 }
 
+function readStoredActivities(): FarmActivity[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const persisted = window.localStorage.getItem(ACTIVITY_STORAGE_KEY);
+  if (!persisted) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(persisted) as FarmActivity[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter((activity) => activity && activity.farmId && activity.title && activity.description && activity.createdAt)
+      .map((activity) => ({
+        id: activity.id,
+        farmId: activity.farmId,
+        type: activity.type,
+        title: activity.title,
+        description: activity.description,
+        createdAt: activity.createdAt,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function FarmsProvider({ children }: { children: ReactNode }) {
   const [farms, setFarms] = useState<Farm[]>(() => readStoredFarms());
+  const [activities, setActivities] = useState<FarmActivity[]>(() => readStoredActivities());
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(farms));
     }
   }, [farms]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(activities));
+    }
+  }, [activities]);
+
+  const addActivity = (farmId: string, title: string, description: string, type: FarmActivityType) => {
+    const activity: FarmActivity = {
+      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      farmId,
+      type,
+      title,
+      description,
+      createdAt: new Date().toISOString(),
+    };
+
+    setActivities((current) => [activity, ...current].slice(0, ACTIVITY_LIMIT));
+    return activity;
+  };
+
+  const getFarmActivities = (farmId: string) => {
+    return activities
+      .filter((activity) => activity.farmId === farmId)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, 12);
+  };
 
   const addFarm = (farm: FarmDraft) => {
     const createdFarm: Farm = normalizeFarm({
@@ -450,10 +525,15 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
     });
 
     setFarms((current) => [createdFarm, ...current]);
+    addActivity(createdFarm.id, 'Farm created', `${createdFarm.name} was created in SoilMint.`, 'created');
+    addActivity(createdFarm.id, 'Farm data saved', `${createdFarm.name} profile data was saved.`, 'saved');
+    addActivity(createdFarm.id, 'Farm setup completed', `${createdFarm.name} profile and setup were completed.`, 'setup_completed');
     return createdFarm;
   };
 
   const updateFarm = (id: string, updates: Partial<Farm>) => {
+    const existingFarm = farms.find((farm) => farm.id === id);
+
     setFarms((current) =>
       current.map((farm) => {
         if (farm.id !== id) {
@@ -466,10 +546,21 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
         };
       }),
     );
+
+    if (existingFarm) {
+      addActivity(id, 'Farm details updated', `${existingFarm.name} details were updated.`, 'updated');
+      addActivity(id, 'Farm data saved', `${existingFarm.name} data was saved successfully.`, 'saved');
+    }
   };
 
   const deleteFarm = (id: string) => {
+    const deletedFarm = farms.find((farm) => farm.id === id);
+    if (deletedFarm) {
+      addActivity(id, 'Farm deleted', `${deletedFarm.name} was deleted from SoilMint.`, 'deleted');
+    }
+
     setFarms((current) => current.filter((farm) => farm.id !== id));
+    setActivities((current) => current.filter((activity) => activity.farmId !== id));
   };
 
   const addTimelineEvent = (farmId: string, event: FarmTimelineEvent) => {
@@ -493,8 +584,8 @@ export function FarmsProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ farms, addFarm, getFarmById, updateFarm, deleteFarm, addTimelineEvent }),
-    [farms, getFarmById],
+    () => ({ farms, activities, addFarm, getFarmById, getFarmActivities, addActivity, updateFarm, deleteFarm, addTimelineEvent }),
+    [farms, activities, getFarmById],
   );
 
   return <FarmsContext.Provider value={value}>{children}</FarmsContext.Provider>;

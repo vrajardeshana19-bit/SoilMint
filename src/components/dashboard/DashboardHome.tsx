@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, BarChart3, Bot, FileText, Leaf, Plus, Sprout, TrendingUp, Upload, Workflow } from 'lucide-react';
+import { ArrowRight, BarChart3, Bot, CalendarDays, FileText, Leaf, Plus, Sprout, TrendingUp, Upload, Workflow } from 'lucide-react';
+import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
+import { useFarms } from '../../contexts/FarmsContext';
 import type { Farm } from '../../contexts/FarmsContext';
 
 const quickActions = [
@@ -15,14 +17,6 @@ type DashboardHomeProps = {
   farms: Farm[];
   onAddFarm?: () => void;
 };
-
-const timeline = [
-  'Farm Created',
-  'Land Record Uploaded',
-  'Satellite Analysis Completed',
-  'Carbon Assessment Generated',
-  'Marketplace Listing Created',
-];
 
 function numericValue(value: string) {
   const parsed = Number.parseFloat(value.replace(/[^\d.]/g, ''));
@@ -47,6 +41,14 @@ function formatIncome(farms: Farm[]) {
 }
 
 export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
+  const { currentFarmId } = useCurrentFarm();
+  const { activities } = useFarms();
+
+  const visibleActivities = activities
+    .filter((activity) => activity.farmId === currentFarmId)
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 8);
+
   const totalCredits = farms.reduce((sum, farm) => sum + numericValue(farm.credits), 0);
 
   const averageScore = farms.length
@@ -125,21 +127,43 @@ export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
         </div>
       </div>
 
-      <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-5 shadow-[0_25px_80px_rgba(2,6,23,0.16)] backdrop-blur-xl">
-        <p className="text-sm font-medium text-emerald-300">Recent Activity</p>
-        <div className="mt-4 space-y-3">
-          {timeline.map((item, index) => (
-            <div key={item} className="flex items-center gap-3">
-              <div className="flex size-8 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-500/10 text-sm font-semibold text-emerald-200">
-                {index + 1}
-              </div>
-              <div className="flex-1 rounded-[1rem] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-                {item}
-              </div>
-            </div>
-          ))}
+      <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-5 shadow-[0_25px_80px_rgba(2,6,23,0.16)] backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-emerald-300">Recent Activity</p>
+            <h2 className="mt-1 text-xl font-semibold text-white">Farm Updates</h2>
+          </div>
         </div>
-      </div>
+
+        <div className="mt-4 space-y-3">
+          {visibleActivities.length === 0 ? (
+            <div className="rounded-[1rem] border border-dashed border-white/15 bg-white/5 px-4 py-5 text-sm text-slate-400">
+              No recent activity
+            </div>
+          ) : (
+            visibleActivities.map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-500/10 text-sm font-semibold text-emerald-200">
+                  <FileText className="size-3.5" />
+                </div>
+                <div className="flex-1 rounded-[1rem] border border-white/10 bg-white/5 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-white">{activity.title}</p>
+                    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                      <CalendarDays className="size-3" />
+                      {new Date(activity.createdAt).toLocaleString('en-IN', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-400">{activity.description}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }

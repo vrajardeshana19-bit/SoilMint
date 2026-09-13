@@ -4,10 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
+import { useCurrentFarm } from '../contexts/CurrentFarmContext';
+import { useFarms } from '../contexts/FarmsContext';
 
 export default function ProfileSetup() {
   const navigate = useNavigate();
   const { completeProfile, user } = useAuth();
+  const { currentFarmId } = useCurrentFarm();
+  const { addActivity } = useFarms();
   const [farmName, setFarmName] = useState(user?.farmName ?? '');
   const [location, setLocation] = useState(user?.location ?? '');
   const [error, setError] = useState('');
@@ -23,6 +27,9 @@ export default function ProfileSetup() {
     }
 
     completeProfile(user?.name ?? 'Farmer', user?.phone ?? '+91 00000 00000', farmName.trim(), location.trim());
+    if (currentFarmId) {
+      addActivity(currentFarmId, 'Profile setup completed', `${farmName.trim()} profile details were completed.`, 'setup_completed');
+    }
     setError('');
     navigate('/onboarding');
   };
