@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, BarChart3, Bot, CalendarDays, FileText, Leaf, Plus, Sprout, TrendingUp, Upload, Workflow } from 'lucide-react';
+import { ArrowRight, BarChart3, Bot, CalendarDays, FileText, HeartPulse, Leaf, Plus, Sprout, TrendingUp, Upload, Workflow } from 'lucide-react';
 import { useCurrentFarm } from '../../contexts/CurrentFarmContext';
 import { useFarms } from '../../contexts/FarmsContext';
 import type { Farm } from '../../contexts/FarmsContext';
+import { calculateFarmHealth } from '../../lib/farmHealth';
 
 const quickActions = [
   { title: 'Add Farm', subtitle: 'Create a new digital farm profile', icon: Plus },
@@ -40,6 +41,21 @@ function formatIncome(farms: Farm[]) {
   return `₹${Math.round(total).toLocaleString('en-IN')}`;
 }
 
+function statusClass(status: string) {
+  switch (status) {
+    case 'Excellent':
+      return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200';
+    case 'Good':
+      return 'border-sky-400/40 bg-sky-500/15 text-sky-200';
+    case 'Needs Attention':
+      return 'border-amber-400/40 bg-amber-500/15 text-amber-200';
+    case 'Critical':
+      return 'border-rose-400/40 bg-rose-500/15 text-rose-200';
+    default:
+      return 'border-slate-400/40 bg-slate-500/15 text-slate-200';
+  }
+}
+
 export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
   const { currentFarmId } = useCurrentFarm();
   const { activities } = useFarms();
@@ -48,6 +64,10 @@ export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
     .filter((activity) => activity.farmId === currentFarmId)
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .slice(0, 8);
+
+  const selectedFarm = farms.find((farm) => farm.id === currentFarmId) ?? farms[0];
+  const selectedFarmActivities = activities.filter((activity) => activity.farmId === selectedFarm?.id);
+  const farmHealth = calculateFarmHealth(selectedFarm, selectedFarmActivities);
 
   const totalCredits = farms.reduce((sum, farm) => sum + numericValue(farm.credits), 0);
 
@@ -88,6 +108,49 @@ export function DashboardHome({ farms, onAddFarm }: DashboardHomeProps) {
           );
         })}
       </div>
+
+      <section className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-5 shadow-[0_25px_80px_rgba(2,6,23,0.16)] backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-emerald-300">Farm Health</p>
+            <h2 className="mt-1 text-xl font-semibold text-white">{selectedFarm?.name ?? 'Farm Health'}</h2>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-300">
+            <HeartPulse className="size-4 text-emerald-300" />
+            SoilMint Health
+          </div>
+        </div>
+
+        {farmHealth.dataAvailable ? (
+          <div className="mt-5 grid gap-4 md:grid-cols-[auto_1fr] md:items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex size-24 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10 text-center shadow-[0_0_24px_rgba(16,185,129,0.16)]">
+                <div>
+                  <p className="text-3xl font-bold text-white">{farmHealth.score}</p>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">/100</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${statusClass(farmHealth.status)}`}>{farmHealth.status}</span>
+                <p className="text-sm text-slate-400">Score based on existing profile, records, sustainability, and environmental signals.</p>
+              </div>
+            </div>
+
+            <div className="rounded-[1.2rem] border border-white/10 bg-white/5 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Health explanation</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{farmHealth.explanation}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-[1rem] border border-dashed border-white/15 bg-white/5 px-4 py-5 text-sm text-slate-400">
+            <div className="flex items-center gap-2">
+              <HeartPulse className="size-4 text-emerald-300" />
+              <span className="font-semibold text-white">Not enough data</span>
+            </div>
+            <p className="mt-2">Add farm details, documents, activities, or sustainability metrics to create a Farm Health score.</p>
+          </div>
+        )}
+      </section>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(2,6,23,0.96))] p-5 shadow-[0_25px_80px_rgba(2,6,23,0.16)] backdrop-blur-xl">
         <div className="flex items-center justify-between">
