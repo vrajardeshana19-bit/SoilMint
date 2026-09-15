@@ -104,6 +104,7 @@ Supported formats include:
 * JPG
 * JPEG
 
+
 The uploaded document becomes the starting point for creating the digital farm profile.
 
 ### Step 3 — AI Processing
